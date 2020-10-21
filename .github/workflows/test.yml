@@ -1,0 +1,12 @@
+name: Contrib Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sample_job_1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sample Job Run
+        run: echo Job Complete

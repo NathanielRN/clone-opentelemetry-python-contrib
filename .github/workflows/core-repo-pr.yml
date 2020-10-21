@@ -1,0 +1,56 @@
+name: Compatibility with Core Repo Test
+
+on:
+  # push:
+  workflow_dispatch:
+    inputs:
+      fork_repository:
+        description: 'Forked core repository'
+        required: true
+        default: open-telemetry/opentlemetry-python
+      fork_ref:
+        description: 'Forked core repository ref'
+        required: true
+        default: master
+
+jobs:
+  check_compatibility:
+    env:
+      # We use these variables to convert between tox and GHA version literals
+      py35: 3.5
+      py36: 3.6
+      py37: 3.7
+      py38: 3.8
+      pypy3: pypy3
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false  # ensures the entire test matrix is run, even if one permutation fails
+      matrix:
+        python-version: [ py35, py36, py37, py38, pypy3 ]
+        package: ["instrumentation"]
+        os: [ ubuntu-latest ]
+    steps:
+      - name: Checkout Contrib Repo master
+        uses: actions/checkout@v2
+      - name: Checkout Core Repo at requested fork and branch
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.event.inputs.fork_repository }}
+          ref: ${{ github.event.inputs.fork_ref }}
+          path: opentelemetry-python
+      - name: Set up Python ${{ env[matrix.python-version] }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env[matrix.python-version] }}
+      - name: Install tox
+        run: pip install -U tox-factor
+      - name: Cache tox environment
+        # Preserves .tox directory between runs for faster installs
+        uses: actions/cache@v2
+        with:
+          path: .tox
+          key: tox-cache-${{ matrix.python-version }}-${{ matrix.package }}-${{ matrix.os }}-${{ hashFiles('tox.ini', 'dev-requirements.txt') }}
+      - name: run tox
+        run: tox -f ${{ matrix.python-version }}-${{ matrix.package }}
+      - name: Simple Test
+        run: echo Hello, World!
